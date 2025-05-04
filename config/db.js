@@ -1,3 +1,4 @@
+const fs = require('fs')
 const {Sequelize} = require('sequelize')
 require('dotenv').config(); //loads .env file data in process.env
 
@@ -7,8 +8,14 @@ const sequelize = new Sequelize(
     process.env.DB_PASS,
     {
         host: process.env.DB_HOST,
-        dialact: 'mysql',
-        logging: false
+        port: process.env.DB_PORT,
+        dialect: 'mysql',
+        dialectOptions: {
+            ssl: {
+              ca: fs.readFileSync('./cert/ca.pem'),
+              rejectUnauthorized: true
+            }
+        }
     }
 )
 
