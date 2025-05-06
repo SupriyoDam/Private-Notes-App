@@ -14,7 +14,7 @@ const Note = sequelize.define('Note',{
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    filepath: {
+    filekey: {
         type: DataTypes.TEXT,
         allowNull: true
     }

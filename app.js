@@ -20,7 +20,7 @@ app.get('/', (req, res, next) => {
 })
 
 
-sequelize.sync({force:false})  // Do NOT use 'force: true' in production
+sequelize.sync({alter:false})  // Do NOT use 'force: true' in production
 .then(()=> {
     console.log('DB connected succesfully.')
 })
