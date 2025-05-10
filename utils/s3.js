@@ -1,4 +1,4 @@
-const {S3Client, GetObjectCommand, HeadObjectCommand , DeleteObjectCommand} = require('@aws-sdk/client-s3')
+const {S3Client, GetObjectCommand, HeadObjectCommand , DeleteObjectCommand, DeleteObjectsCommand} = require('@aws-sdk/client-s3')
 // 
 
 const s3client = new S3Client({
@@ -9,4 +9,4 @@ const s3client = new S3Client({
     }
 })
 
-module.exports = {s3client, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand}
+module.exports = {s3client, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand, DeleteObjectsCommand}

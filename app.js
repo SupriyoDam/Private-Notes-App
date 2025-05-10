@@ -19,7 +19,6 @@ app.get('/', (req, res, next) => {
     res.send('Privae Note App is running...')
 })
 
-
 sequelize.sync({alter:false})  // Do NOT use 'force: true' in production
 .then(()=> {
     console.log('DB connected succesfully.')

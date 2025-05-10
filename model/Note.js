@@ -12,12 +12,13 @@ const Note = sequelize.define('Note',{
     },
     userId: {
         type: DataTypes.INTEGER,
-        allowNull: false
+        allowNull: false 
     },
-    filekey: {
-        type: DataTypes.TEXT,
-        allowNull: true
-    }
+    // not required as we are now storing file key in diffferent table, as we now have multiple file in single notes.
+    // filekey: { 
+    //     type: DataTypes.TEXT,
+    //     allowNull: true
+    // }
 })
 
 module.exports = Note

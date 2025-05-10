@@ -1,15 +1,26 @@
-const {s3client, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand}  = require("../utils/s3");
+const {s3client, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand, DeleteObjectsCommand}  = require("../utils/s3");
 const { getSignedUrl }= require('@aws-sdk/s3-request-presigner')
-const{Note} = require("../model/index");
+const{Note, NoteFile} = require("../model/index");
 
 exports.postNoteCreate = (req, res, next) => {
     const {title, content} = req.body;
     const userId = req.user.userId
-    const filekey = req.file ? req.file.key : null;
+    // const filekey = req.file ? req.file.key : null;
+    
 
-    Note.create({title, content, userId, filekey})
+    Note.create({title, content, userId})
         .then(note => {
+            
+            const fileArray = req.files || []
+            for (const file of fileArray){
+                NoteFile.create({
+                    noteId: note.id,
+                    key: file.key
+                })
+            }
+
             res.status(201).json({ message: 'Note created', note });
+
         })
         .catch(err => {
             res.status(500).json({ message: 'Note creation failed', error: err.message });
@@ -33,41 +44,43 @@ exports.getNoteById = (req, res, next) => {
     const userId = req.user.userId
     const noteId = req.params.noteId
 
-    Note.findOne({where: {id: noteId, userId: userId}})
+    //finds note 
+    Note.findOne({where: {id: noteId, userId: userId}, include: NoteFile})
         .then(note => {
-            const key = note.filekey
-
-            //fetching metadata
-            const headCommand = new HeadObjectCommand({
-                Bucket:process.env.S3_BUCKET_NAME,
-                Key: key
-            })
-
-            s3client.send(headCommand)
-            .then(data => {
-                const cType = data.ContentType || 'application/octet-stream';
-                getSignedUrl(s3client, new GetObjectCommand({
+            if (!note) return res.status(404).json({ message: 'Note not found' });
+            return Promise.all(note.NoteFiles.map(file => {
+                 return getSignedUrl(s3client, new GetObjectCommand({
                     Bucket: process.env.S3_BUCKET_NAME,
-                    Key: key,
-                    ResponseContentDisposition: 'inline',
-                    ResponseContentType: cType
-                    }),
-                    {expiresIn: 600}
-                )
-                .then(url => {
-                    res.status(202).json({note, signedUrl: url})
+                    Key: file.key,
+                    ResponseContentDisposition: 'inline'
+                    })).then(signed=>{
+                        console.log('|||||||||Fetched URL: ',signed,' |||||||||||||||')
+                        return {
+                            id: file.id,
+                            key: file.key,
+                            url: signed
+                        }
+                    })
+            })).then(fileWithUrls => {
+                res.json({
+                    id: note.id,
+                    title: note.title,
+                    content: note.content,
+                    files: fileWithUrls
                 })
-                .catch(err => {
-                    console.log(err)
-                    res.status(401).json({message: 'Not Found'})
-                }
-                )
             })
         })
         .catch(err => {
             console.log('Note fetching issue')
-            res.status(401).json({message: 'Note fetching issue'})
+            res.status(401).json({message: 'Note fetching issue', error: err.message})
         })
+
+        // getSignedUrl(s3client, new GetObjectCommand({
+        //     Bucket: process.env.S3_BUCKET_NAME,
+        //     Key: key,
+        //     ResponseContentDisposition: 'inline'
+        //     }),
+        //     {expiresIn: 600})
 }
 
 exports.putUpdateNote = (req, res, next) => {
@@ -100,36 +113,34 @@ exports.deleteNote = (req, res, next) => {
     const userId = req.user.userId
     const noteId = req.params.noteId
 
-    Note.findOne({where: {userId: userId, id: noteId}})
+    Note.findOne({where: {userId: userId, id: noteId}, include: NoteFile})
         .then(note => {
-            if(!note) return res.status(501).json({message: 'Nots not exist'});
+            if(!note) 
+                return res.status(501).json({message: 'Note does not exist'});
 
-            if(note.filekey){
-                const delCommand = new DeleteObjectCommand(
+            const fileKeys = note.NoteFiles.map(file => ({Key: file.key}))
+
+            console.log('filekeys: ', fileKeys)
+
+            if(fileKeys.length > 0){
+                const delCommand = new DeleteObjectsCommand(
                     {
                         Bucket: process.env.S3_BUCKET_NAME,
-                        Key: note.filekey
+                        Delete: {Objects: fileKeys}
                     }
                 )
-                s3client.send(delCommand).then(()=>{
-                    note.destroy()
-                    .then(data => {
-                        res.status(201).json({message: 'Note deleted', data})
-                    })
-                    .catch(err => {
-                        res.status(501).json({message: 'Note deletion failed.', error: err.message})
-                    })
-                    // res.status(301).json({message: 'File has been deleted.'});
-                })
+                return s3client.send(delCommand)
+                    .then(()=> note.destroy())
+                    .then(()=>{res.json({message: 'Note Deleetd with its associated files.'})})
+
             }
             else{ // when file is not attatched || filekey is null
-                note.destroy()
+                return note.destroy()
                     .then(data => {
-                        res.status(201).json({message: 'Note deleted', data})
-                    })
-                    .catch(err => {
-                        res.status(501).json({message: 'Note deletion failed.', error: err.message})
+                        res.status(201).json({message: 'Note deleted, no files were attatched.', data})
                     })
             }
+        }).catch(err => {
+            res.status(501).json({message: 'Note deletion failed.', error: err.message})
         })
 }
