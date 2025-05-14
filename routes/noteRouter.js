@@ -8,6 +8,7 @@ router.post('/create', upload.array('files',3) , noteController.postNoteCreate)
 router.get('/all', noteController.getUserNote)
 router.get('/:noteId', noteController.getNoteById)
 router.put('/:noteId', noteController.putUpdateNote)
+router.put('/:noteId/attachment', upload.array('files',2), noteController.addAttachmentToNote)
 router.delete('/:noteId', noteController.deleteNote)
 
 module.exports = router
