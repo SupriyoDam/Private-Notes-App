@@ -162,8 +162,8 @@ exports.addAttachmentToNote = (req, res, next)=>{
             if(!req.files || req.files.length === 0) return res.status(400).json({message:'No files selected'});
 
             const fileRecords = req.files.map(file => ({
-                Key: file.key,
-                noteId: note.id
+                noteId: note.id,
+                key: file.key
             }))
 
             return NoteFile.bulkCreate(fileRecords)

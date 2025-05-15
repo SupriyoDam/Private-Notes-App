@@ -11,6 +11,11 @@ const authenticateUser = require('./middleware/authMiddleware');
 const app = express()
 app.use(express.json())
 
+//added for creating swagger docs
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./docs/swagger');
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use('/api/auth', authRouter)
 app.use('/api/admin', adminRouter)
